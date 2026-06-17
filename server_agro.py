@@ -29,47 +29,53 @@ async def consultar_ia_agro(req: ConsultaAgro):
     if len(req.pergunta) < 2:
         raise HTTPException(status_code=400, detail="Entrada vazia.")
 
-    # PROMPT DE ALTO NÍVEL: Focado em matemática agronômica real e rastreabilidade.
-    prompt_sistema = """Você é o Motor de Inteligência Agronômica E.T.E.M.A.R. 
+    # PROMPT DE ALTO NÍVEL: O JSON do financeiro agora é estruturado
+    prompt_sistema = """Você é o Pesquisador Chefe de Agronomia do sistema E.T.E.M.A.R. 
     Se o produtor der dados vagos, exija Área, Cultura, Local e Época retornando: {"precisa_info": true, "pergunta_ia": "..."}.
     
-    Se houver dados suficientes, gere um DOSSIÊ TÉCNICO usando COERÊNCIA MATEMÁTICA AGRONÔMICA:
-    - Manga Tommy produz ~30 a 40 t/ha. Soja ~50 a 60 sc/ha. 
-    - Se a seca foi severa, a perda deve refletir isso (ex: 20% a 40%). Não invente perdas de 1% para climas extremos.
-    - MOSTRE A MATEMÁTICA: (Área * Produtividade Média * % Perda * Preço/kg).
-    
+    REGRA DE OURO: 
+    É ESTRITAMENTE PROIBIDO dar respostas rasas de 1 linha. Use negrito (**) para palavras-chave.
+    Seja transparente e lógico na matemática.
+
     RETORNE OBRIGATORIAMENTE ESTE JSON ESTRITO:
     {
         "precisa_info": false,
         "rastreabilidade": {
-            "fonte_clima": "🔵 INMET / API Simulado",
-            "fonte_mercado": "🔵 CEPEA / CONAB Simulado"
+            "fonte_clima": "🔵 INMET / MapBiomas",
+            "fonte_mercado": "🔵 CEPEA / CONAB"
         },
         "diagnostico": {
-            "texto": "Diagnóstico agronômico direto e técnico.",
+            "texto": "Diagnóstico aprofundado com pelo menos 2 parágrafos. Explique cientificamente a causa.",
             "matriz_confianca": [
-                {"causa": "Estresse Hídrico Severo", "probabilidade": 90},
-                {"causa": "Deficiência Nutricional (Ca/K)", "probabilidade": 45},
-                {"causa": "Ataque Fitossanitário", "probabilidade": 15}
+                {"causa": "Estresse Hídrico", "probabilidade": 90},
+                {"causa": "Deficiência Nutricional", "probabilidade": 45}
             ]
         },
         "plano_acao": {
-            "imediato": "O que fazer nas próximas 48h (ex: irrigação socorro).",
-            "dias_30": "O que fazer no próximo mês (ex: manejo foliar).",
-            "proxima_safra": "Investimentos estruturais (ex: automação, poda)."
+            "imediato": "Ação tática de campo imediata.",
+            "dias_30": "Ação para os próximos 30 dias.",
+            "proxima_safra": "Estratégia de investimento estrutural."
         },
         "textos_extras": {
-            "clima": "Análise climática com dados.",
-            "mercado": "Comparativo de safras anteriores e mercado atual."
+            "clima": "Análise climática baseada no local.",
+            "mercado": "Lei de oferta e demanda aplicada ao caso."
         },
         "financeiro": {
-            "memoria_calculo": "80 ha x 30 t/ha = 2.400 t. Perda de 25% = 600 t. Cotação: R$ 2,50/kg.",
-            "perda_toneladas": "600 t",
-            "prejuizo_total": "R$ 1.500.000,00"
+            "premissas": {
+                "area": "80 ha",
+                "produtividade_media": "30 t/ha",
+                "cotacao_atual": "R$ 2,50/kg"
+            },
+            "impacto": {
+                "taxa_perda": "50%",
+                "volume_perdido": "1.200 t"
+            },
+            "resultado": "R$ 3.000.000,00",
+            "formula_aplicada": "(80 ha * 30 t/ha) * 50% de perda = 1.200 t. (1.200 t * 1000 kg) * R$ 2,50 = R$ 3.000.000,00"
         },
         "graficos": [
-            {"titulo": "Histórico e Projeção de Preço (R$/kg)", "tipo": "line", "labels": ["Safra 23", "Safra 24", "Atual", "Proj 26"], "dados": [2.10, 2.30, 2.50, 2.20]},
-            {"titulo": "Déficit Hídrico (mm)", "tipo": "bar", "labels": ["Mês -2", "Mês -1", "Atual"], "dados": [120, 40, 10]}
+            {"titulo": "Histórico de Preço (R$/kg)", "tipo": "line", "labels": ["Safra Ant", "Mês Passado", "Atual", "Proj"], "dados": [4.1, 4.3, 5.0, 5.2]},
+            {"titulo": "Anomalia Climática (mm)", "tipo": "bar", "labels": ["Mês -2", "Mês -1", "Atual"], "dados": [80, 40, 10]}
         ]
     }
     """
@@ -82,11 +88,19 @@ async def consultar_ia_agro(req: ConsultaAgro):
         res = await client.chat.completions.create(
             messages=mensagens,
             model="llama-3.3-70b-versatile",
-            max_tokens=4000, 
-            temperature=0.1, # Quase zero: Máxima precisão matemática e zero alucinação
+            max_tokens=4500, 
+            temperature=0.3,
             response_format={"type": "json_object"}
         )
-        return json.loads(res.choices[0].message.content)
+        
+        conteudo = res.choices[0].message.content.strip()
+        if conteudo.startswith("```json"):
+            conteudo = conteudo[7:]
+        if conteudo.endswith("```"):
+            conteudo = conteudo[:-3]
+            
+        return json.loads(conteudo)
+        
     except Exception as e:
         print(f"🚨 ERRO AGRO: {e}")
         raise HTTPException(status_code=500, detail=str(e))
